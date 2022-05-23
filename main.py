@@ -1,5 +1,7 @@
 import glm
 from OpenGL.GL import *
+from RLppo.test_train import train, test
+import gym
 
 import glfw
 from ocean_env import OceanEnv
@@ -79,9 +81,34 @@ def main():
     #
     # glfw.terminate()
     # return 0
+
+    # env = OceanEnv()
+    # while True:
+    #     env.step([0, 0, 1.4, 0, 0, 0, 0, 0])
+    #     env.render()
+
+    mode = 'train'
+    actor_model = ''
+    critic_model = ''
+
+    hyperparameters = {
+        'timesteps_per_batch': 2048,
+        'max_timesteps_per_episode': 200,
+        'gamma': 0.99,
+        'n_updates_per_iteration': 10,
+        'lr': 3e-4,
+        'clip': 0.2,
+        'render': True,
+        'render_every_i': 10
+    }
+
     env = OceanEnv()
-    while True:
-        env.render()
+    # env = gym.make('MountainCarContinuous-v0')
+
+    if mode == 'train':
+        train(env=env, hyperparameters=hyperparameters, actor_model=actor_model, critic_model=critic_model)
+    else:
+        test(env=env, actor_model=actor_model)
 
 
 if __name__ == '__main__':

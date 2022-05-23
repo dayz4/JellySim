@@ -62,7 +62,7 @@ def train_ppo_for_beginners(args):
 		Return:
 			None
 	"""
-	# Import ppo for beginners
+	# Import RLppo for beginners
 	from ppo_for_beginners.ppo import PPO
 	from ppo_for_beginners.network import FeedForwardNN
 

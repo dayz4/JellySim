@@ -35,23 +35,27 @@ class Jellyfish:
         self.internal_positions = self.mesh.vertices
         self.internal_velocities = np.zeros(self.positions.shape)
         self.forces = np.zeros(self.positions.shape)
-        self.mnn_delay = 1.4
+        # self.mnn_delay = 1.4
+        self.mnn_delay = 0
         # self.dnn_activate_time = 0
         self.starting_nerve = None
         self.mnn_dnn_angle = None
         self.rhopalia = self.load_rhopalia(rhopalia)
-        print(self.rhopalia)
+        self.at_rest = True
 
     def draw(self, shader_program, t, dt):
-        self.update(t, dt)
+        # self.update(t, dt, 2, 1.4)
         self.mesh.draw(shader_program, t)
 
-    def update(self, t, dt):
+    def update(self, t, dt, rhop_idx, mnn_delay):
+        self.mnn_delay = mnn_delay
+        rhop = self.rhopalia[rhop_idx]
         if t - self.last_activate_time > 7:
-            rhop = random.choice(self.rhopalia)
+            self.at_rest = True
+        if self.at_rest:
+            # rhop = random.choice(self.rhopalia)
             self.activate_starting_radial_muscle(rhop, t)
             self.starting_nerve = rhop
-
         if self.dnn_conducting and not self.conducting and t - self.last_activate_time > self.mnn_delay:
             self.activate_starting_muscle(self.starting_nerve, t)
 
@@ -115,6 +119,7 @@ class Jellyfish:
             self.activate_radial_muscle(muscle_idx, t)
         self.new_dnn_activations = [nerve]
         self.dnn_conducting = True
+        self.at_rest = False
 
     def propagate_nerve_signal(self, t):
         new_nerve_activations = []
@@ -216,6 +221,10 @@ class Jellyfish:
         #     if sum(v) < .0001:
         #         v_next[i] = 0
         self.velocities = v_next
+
+        q_next, v_next = self.euler(qt, vt, 0, fext, dt)
+        self.mesh.pos = np.mean(q_next, axis=0)
+        self.mesh.velocity = np.mean(v_next, axis=0)
 
 
 

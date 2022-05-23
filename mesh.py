@@ -15,6 +15,7 @@ class Mesh:
         self.triangles = triangles
         self.vao = glGenVertexArrays(1)
         self.pos = glm.vec3(0.0, 0.0, 0.0)
+        self.velocity = glm.vec3(0.0, 0.0, 0.0)
         self.up = glm.vec3(0.0, 1.0, 0.0)
         self.rotation_axis = np.array([0.0, 1.0, 0.0])
         self.rotation_angle = 0
@@ -33,7 +34,7 @@ class Mesh:
         glBufferData(GL_ARRAY_BUFFER, 4*(self.vertices.size+self.offsets.size+self.activations.size), None, GL_DYNAMIC_DRAW)
         glBufferSubData(GL_ARRAY_BUFFER, 0, 4*self.vertices.size, self.vertices.flatten())
         glBufferSubData(GL_ARRAY_BUFFER, 4*self.vertices.size, 4*self.offsets.size, self.offsets.flatten())
-        print(self.activations.flatten().shape)
+        # print(self.activations.flatten().shape)
         glBufferSubData(GL_ARRAY_BUFFER, 4*(self.vertices.size+self.offsets.size), 4 * self.activations.size, self.activations)
 
         ebo = glGenBuffers(1)
@@ -68,11 +69,17 @@ class Mesh:
         #
         # self.model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[0]))
 
-    def convert_to_world_coords(self):
-        model = np.asarray(self.current_model)[:3, :3]
-        pos = self.vertices + self.offsets
-        world_pos = pos @ model
-        return world_pos
+    def world_pos_velocity(self):
+        # model = np.asarray(self.current_model)[:3, :3]
+        # pos = self.vertices + self.offsets
+        # world_pos = pos @ model
+        # return np.mean(world_pos, axis=0)
+
+        model = np.asarray(self.current_model)
+
+        world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
+        world_velocity = model @ np.array([self.velocity[0], self.velocity[1], self.velocity[2], 1])
+        return world_pos[:3]/world_pos[3], world_velocity[:3]/world_velocity[3]
 
     def draw(self, shader_program, t):
         self.update_buffer_offsets()
@@ -95,7 +102,7 @@ class Mesh:
 
         camera_pos = glm.vec3(0.0, 3.0, 10.0)
 
-        view = glm.lookAt(camera_pos, self.pos, self.up)
+        view = glm.lookAt(camera_pos, glm.vec3(0.0, 0.0, 0.0), self.up)
         shader_program.set_matrix("view", view)
 
         projection = glm.mat4(glm.perspective(glm.radians(45.0), 1600 / 1600, 0.1, 100.0))

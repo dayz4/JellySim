@@ -1,9 +1,9 @@
 """
 	This file is used only to evaluate our trained policy/actor after
-	training in main.py with ppo.py. I wrote this file to demonstrate
+	training in main.py with RLppo.py. I wrote this file to demonstrate
 	that our trained policy exists independently of our learning algorithm,
-	which resides in ppo.py. Thus, we can test our trained policy without 
-	relying on ppo.py.
+	which resides in RLppo.py. Thus, we can test our trained policy without
+	relying on RLppo.py.
 """
 
 def _log_summary(ep_len, ep_ret, ep_num):
