@@ -43,9 +43,9 @@ class Jellyfish:
         self.rhopalia = self.load_rhopalia(rhopalia)
         self.at_rest = True
 
-    def draw(self, shader_program, view, projection, t, dt):
+    def draw(self, t):
         # self.update(t, dt, 2, 1.4)
-        self.mesh.draw(shader_program, view, projection, t)
+        self.mesh.draw(t)
 
     def update(self, t, dt, rhop_idx, mnn_delay):
         if t - self.last_activate_time > 7:
@@ -105,6 +105,8 @@ class Jellyfish:
                         else:
                             self.mesh.activations[vertex_id] = 0.0
                         self.nerve_activations[vertex_id] = False
+
+        self.mesh.update(t)
 
     def activate_starting_muscle(self, nerve, t):
         self.last_activate_time = t

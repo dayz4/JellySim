@@ -3,10 +3,11 @@ from OpenGL.GLUT import *
 import numpy as np
 import glm
 import math
+from shader import Shader
 
 
 class Mesh:
-    def __init__(self, vertices, normals, tetrahedrons, triangles):
+    def __init__(self, vertices, normals, tetrahedrons, triangles, view, projection):
         self.vertices = vertices
         self.offsets = np.zeros(self.vertices.shape, dtype="float32")
         self.activations = np.zeros(self.vertices.shape[0], dtype="float32")
@@ -25,6 +26,9 @@ class Mesh:
         self.rotating = False
         self.model = self.init_model_matrix()
         self.current_model = self.model
+        self.shader_program = Shader("shaders/vertex.glsl", "shaders/frag.glsl")
+        self.view = view
+        self.projection = projection
         self.setup_buffers()
 
     def setup_buffers(self):
@@ -70,41 +74,54 @@ class Mesh:
         #
         # self.model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[0]))
 
-    def world_pos_coord(self):
+    def world_pos(self):
         model = np.asarray(self.current_model)
         world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
         return world_pos[:3]/world_pos[3]
 
-    def world_pos_velocity(self):
-        # model = np.asarray(self.current_model)[:3, :3]
-        # pos = self.vertices + self.offsets
-        # world_pos = pos @ model
-        # return np.mean(world_pos, axis=0)
+    # def world_pos_velocity(self):
+    #     # model = np.asarray(self.current_model)[:3, :3]
+    #     # pos = self.vertices + self.offsets
+    #     # world_pos = pos @ model
+    #     # return np.mean(world_pos, axis=0)
+    #
+    #     model = np.asarray(self.current_model)
+    #
+    #     world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
+    #     world_velocity = model @ np.array([self.velocity[0], self.velocity[1], self.velocity[2], 1])
+    #     return world_pos[:3]/world_pos[3], world_velocity[:3]/world_velocity[3]
 
-        model = np.asarray(self.current_model)
-
-        world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
-        world_velocity = model @ np.array([self.velocity[0], self.velocity[1], self.velocity[2], 1])
-        return world_pos[:3]/world_pos[3], world_velocity[:3]/world_velocity[3]
-
-    def draw(self, shader_program, view, projection, t):
-        self.update_buffer_offsets()
-
-        shader_program.use()
-
-        # print(dt_total / (dt_total + .5))
-
+    def update(self, t):
         dt_total = t - self.rotation_start_time
         if self.rotating and dt_total > 4:
             self.end_rotation(t)
-        if self.rotating:
+        elif self.rotating:
             rotation = self.rotation_angle
             rotation *= max(0, 1 / (1 + math.exp(-2 * (dt_total - 1.5))) - .05)
             self.last_rotation_time = t
             model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[2]))
             self.current_model = model
-        else:
-            model = self.model
+
+    def draw(self, t):
+        self.update_buffer_offsets()
+
+        self.shader_program.use()
+
+        # print(dt_total / (dt_total + .5))
+
+        # dt_total = t - self.rotation_start_time
+        # if self.rotating and dt_total > 4:
+        #     self.end_rotation(t)
+        # if self.rotating:
+        #     rotation = self.rotation_angle
+        #     rotation *= max(0, 1 / (1 + math.exp(-2 * (dt_total - 1.5))) - .05)
+        #     self.last_rotation_time = t
+        #     model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[2]))
+        #     self.current_model = model
+        # else:
+        #     model = self.model
+
+        model = self.current_model
 
         # camera_pos = glm.vec3(0.0, 3.0, 10.0)
 
@@ -113,8 +130,8 @@ class Mesh:
 
         # projection = glm.mat4(glm.perspective(glm.radians(45.0), 1600 / 1600, 0.1, 100.0))
 
-        shader_program.set_matrix("model", model)
-        shader_program.set_matrix("view", view)
-        shader_program.set_matrix("projection", projection)
+        self.shader_program.set_matrix("model", model)
+        self.shader_program.set_matrix("view", self.view)
+        self.shader_program.set_matrix("projection", self.projection)
         glBindVertexArray(self.vao)
         glDrawElements(GL_TRIANGLES, len(self.triangles)*3, GL_UNSIGNED_INT, None)

@@ -4,31 +4,35 @@ from OpenGL.GLUT import *
 import glm
 
 
-class Food:
+class Predator:
     def __init__(self, pos):
-        self.pos = np.array(pos)
+        self.pos = pos
         self.vertices = self.get_vertex_positions()
         self.offsets = self.get_offsets()
         self.triangles = self.get_triangles()
-        self.velocities = np.zeros(self.pos.shape)
-        self.model = self.set_model_matrix()
         self.vao = glGenVertexArrays(1)
         self.vbo = glGenBuffers(1)
+        self.model = self.set_model_matrix()
+        self.velocity_magnitude = .1
         self.setup_buffers()
-        # print(self.vertices)
-        # print(self.triangles)
 
     def draw(self, shader_program, view, projection):
+        self.update_buffer_offsets()
+
         shader_program.use()
 
-        # model = glm.rotate(model, glm.radians(-40.0), glm.vec3(0.0, 1.0, 1.0))
         shader_program.set_matrix("model", self.model)
         shader_program.set_matrix("view", view)
         shader_program.set_matrix("projection", projection)
-        # print(self.vertices)
-        # print(self.triangles)
+
         glBindVertexArray(self.vao)
         glDrawElements(GL_TRIANGLES, len(self.triangles)*3, GL_UNSIGNED_INT, None)
+
+    def update(self, jelly_pos, dt):
+        to_jelly = jelly_pos - self.pos
+        dir = to_jelly / np.linalg.norm(to_jelly)
+        self.pos += dir * self.velocity_magnitude * dt
+        self.offsets = self.get_offsets()
 
     def setup_buffers(self):
         glBindVertexArray(self.vao)
@@ -55,48 +59,42 @@ class Food:
 
     def set_model_matrix(self):
         model = glm.mat4(1.0)
-        model = glm.rotate(model, glm.radians(-45.0), glm.vec3(1.0, 1.0, 0.0))
+        # model = glm.rotate(model, glm.radians(-45.0), glm.vec3(1.0, 1.0, 0.0))
         return model
 
     def get_vertex_positions(self):
-        vertices = []
-        for _ in self.pos:
-            vertices.extend([
-                [ .2,  .2,  .2],
-                [ .2, -.2, -.2],
-                [-.2,  .2, -.2],
-                [-.2, -.2,  .2]
-            ])
+        vertices = [
+            [ .2,  .2,  .2],
+            [ .2, -.2,  .2],
+            [ .2,  .2, -.2],
+            [ .2, -.2, -.2],
+            [-.2,  .2,  .2],
+            [-.2, -.2,  .2],
+            [-.2,  .2, -.2],
+            [-.2, -.2, -.2]
+        ]
         return np.array(vertices, dtype="float32")
 
     def get_offsets(self):
-        offsets = []
-        for pos in self.pos:
-            offsets.extend([pos, pos, pos, pos])
+        offsets = [self.pos, self.pos, self.pos, self.pos, self.pos, self.pos, self.pos, self.pos]
         return np.array(offsets, dtype="float32")
 
     def get_triangles(self):
-        triangles = []
-        for i in range(len(self.pos)):
-            v0 = 0 + i*4
-            v1 = 1 + i*4
-            v2 = 2 + i*4
-            v3 = 3 + i*4
-            triangles.extend([[v0, v1, v2], [v0, v1, v3], [v0, v2, v3], [v1, v2, v3]])
+        triangles = [
+            [0, 1, 2],
+            [1, 3, 2],
+            [0, 2, 6],
+            [0, 6, 4],
+            [4, 6, 7],
+            [5, 4, 7],
+            [1, 5, 3],
+            [3, 5, 7],
+            [0, 5, 1],
+            [0, 4, 5],
+            [2, 3, 7],
+            [2, 6, 7]
+        ]
         return np.array(triangles)
 
     def world_pos(self):
-        # model = np.asarray(self.model)[:3, :3]
-        # # pos = np.concatenate((self.pos, np.ones(self.pos.shape[0]).reshape(self.pos.shape[0], 1)), axis=1)
-        # world_pos = self.pos @ model
-        # # velocities = np.concatenate((self.velocities, np.ones(self.velocities.shape[0]).reshape(self.velocities.shape[0], 1)), axis=1)
-        # world_velocities = self.velocities @ model
-        # return world_pos.flatten(), world_velocities.flatten()
-        return self.pos.flatten()
-
-    def respawn(self, idx, pos):
-        self.pos[idx] = pos
-        self.offsets[idx * 4:idx * 4 + 4] = [pos, pos, pos, pos]
-        self.update_buffer_offsets()
-
-
+        return self.pos

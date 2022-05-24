@@ -30,20 +30,20 @@ class FEMElement:
     # def calc_volume(self):
     #     return np.linalg.det(self.Dm()) / 6.0
 
-    def calc_surface_area(self):
-        v0, v1, v2, v3 = self.reference_vertices
-        triangles = [[v0, v1, v2], [v0, v1, v3], [v0, v2, v3], [v1, v2, v3]]
-        max_area = 0
-        max_triangle = None
-        for a, b, c in triangles:
-            ab = b - a
-            ac = c - a
-            theta = math.acos(np.dot(ab, ac))
-            area = np.linalg.norm(ab) * np.linalg.norm(ac) * math.cos(theta) / 2.0
-            if area > max_area:
-                max_area = area
-                max_triangle = [a, b, c]
-        return max_area, max_triangle
+    # def calc_surface_area(self):
+    #     v0, v1, v2, v3 = self.reference_vertices
+    #     triangles = [[v0, v1, v2], [v0, v1, v3], [v0, v2, v3], [v1, v2, v3]]
+    #     max_area = 0
+    #     max_triangle = None
+    #     for a, b, c in triangles:
+    #         ab = b - a
+    #         ac = c - a
+    #         theta = math.acos(np.dot(ab, ac))
+    #         area = np.linalg.norm(ab) * np.linalg.norm(ac) * math.cos(theta) / 2.0
+    #         if area > max_area:
+    #             max_area = area
+    #             max_triangle = [a, b, c]
+    #     return max_area, max_triangle
 
     def find_surface_triangle(self):
         v0, v1, v2, v3 = self.reference_vertices

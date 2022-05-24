@@ -7,22 +7,22 @@ from fem_element import FEMElement
 from radial_muscle import RadialMuscle
 
 
-def load():
+def load(view, projection):
     # vertices, normals, tetrahedrons, triangles = vtk_loader.load("models/jellyfish3")
     vertices, normals, tetrahedrons, triangles = msh_loader.load("models/jellyfish4")
     line_segments, line_vertices = obj_loader.load("models/muscles4")
     radial_segments, radial_vertices = obj_loader.load("models/radial3")
     _, rhopalia = obj_loader.load("models/rhopalia")
     mesh_info = MeshInfo(vertices, normals, tetrahedrons, triangles, line_segments, line_vertices, radial_segments, radial_vertices)
-    mesh = build_mesh(mesh_info)
+    mesh = build_mesh(mesh_info, view, projection)
     muscles = build_muscles(mesh_info)
     radial_muscles = build_radial(mesh_info)
     fem_elements = build_fem_elements(mesh_info)
     return Jellyfish(mesh, muscles, radial_muscles, fem_elements, rhopalia)
 
 
-def build_mesh(mesh_info):
-    return Mesh(mesh_info.vertices, mesh_info.normals, mesh_info.tetrahedrons, mesh_info.triangles)
+def build_mesh(mesh_info, view, projection):
+    return Mesh(mesh_info.vertices, mesh_info.normals, mesh_info.tetrahedrons, mesh_info.triangles, view, projection)
 
 
 def build_muscles(mesh_info):
