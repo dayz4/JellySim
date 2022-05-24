@@ -84,7 +84,7 @@ def main():
 
     # env = OceanEnv()
     # while True:
-    #     env.step([0, 0, 1.4, 0, 0, 0, 0, 0])
+    #     env.step([0, 0, 0, 0, .1, 0, 0, 0])
     #     env.render()
 
     mode = 'train'

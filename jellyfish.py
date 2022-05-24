@@ -43,22 +43,22 @@ class Jellyfish:
         self.rhopalia = self.load_rhopalia(rhopalia)
         self.at_rest = True
 
-    def draw(self, shader_program, t, dt):
+    def draw(self, shader_program, view, projection, t, dt):
         # self.update(t, dt, 2, 1.4)
-        self.mesh.draw(shader_program, t)
+        self.mesh.draw(shader_program, view, projection, t)
 
     def update(self, t, dt, rhop_idx, mnn_delay):
-        self.mnn_delay = mnn_delay
-        rhop = self.rhopalia[rhop_idx]
         if t - self.last_activate_time > 7:
             self.at_rest = True
         if self.at_rest:
+            self.mnn_delay = mnn_delay
+            rhop = self.rhopalia[rhop_idx]
+            # print(rhop)
             # rhop = random.choice(self.rhopalia)
             self.activate_starting_radial_muscle(rhop, t)
             self.starting_nerve = rhop
         if self.dnn_conducting and not self.conducting and t - self.last_activate_time > self.mnn_delay:
             self.activate_starting_muscle(self.starting_nerve, t)
-
         if self.conducting and t - self.last_mnn_conduction_time > .01:
             self.propagate_nerve_signal(t)
             self.last_mnn_conduction_time = t
@@ -225,8 +225,6 @@ class Jellyfish:
         q_next, v_next = self.euler(qt, vt, 0, fext, dt)
         self.mesh.pos = np.mean(q_next, axis=0)
         self.mesh.velocity = np.mean(v_next, axis=0)
-
-
 
         # self.mesh.get_rotation(angle, axis)
 

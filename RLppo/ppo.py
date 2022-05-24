@@ -180,6 +180,7 @@ class PPO:
 
         # Keep simulating until we've run more than or equal to specified timesteps per batch
         while t < self.timesteps_per_batch:
+            print(t)
             ep_rews = [] # rewards collected per episode
 
             # Reset the environment. sNote that obs is short for observation.
@@ -195,6 +196,7 @@ class PPO:
                 t += 1 # Increment timesteps ran this batch so far
 
                 # Track observations in this batch
+                # print(obs)
                 batch_obs.append(obs)
 
                 # Calculate action and make a step in the env.
@@ -337,7 +339,7 @@ class PPO:
         # Miscellaneous parameters
         self.render = True                              # If we should render during rollout
         self.render_every_i = 10                        # Only render every n iterations
-        self.save_freq = 10                             # How often we save in number of iterations
+        self.save_freq = 3                              # How often we save in number of iterations
         self.seed = None                                # Sets the seed of our program, used for reproducibility of results
 
         # Change any default values to custom values for specified hyperparameters

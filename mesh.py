@@ -14,7 +14,8 @@ class Mesh:
         self.tetrahedrons = tetrahedrons
         self.triangles = triangles
         self.vao = glGenVertexArrays(1)
-        self.pos = glm.vec3(0.0, 0.0, 0.0)
+        self.vbo = glGenBuffers(1)
+        self.pos = np.mean(self.vertices, axis=0)
         self.velocity = glm.vec3(0.0, 0.0, 0.0)
         self.up = glm.vec3(0.0, 1.0, 0.0)
         self.rotation_axis = np.array([0.0, 1.0, 0.0])
@@ -29,8 +30,7 @@ class Mesh:
     def setup_buffers(self):
         glBindVertexArray(self.vao)
 
-        vbo = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         glBufferData(GL_ARRAY_BUFFER, 4*(self.vertices.size+self.offsets.size+self.activations.size), None, GL_DYNAMIC_DRAW)
         glBufferSubData(GL_ARRAY_BUFFER, 0, 4*self.vertices.size, self.vertices.flatten())
         glBufferSubData(GL_ARRAY_BUFFER, 4*self.vertices.size, 4*self.offsets.size, self.offsets.flatten())
@@ -51,6 +51,7 @@ class Mesh:
         glBindVertexArray(0)
 
     def update_buffer_offsets(self):
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         glBufferSubData(GL_ARRAY_BUFFER, 4*self.vertices.size, 4*self.offsets.size, self.offsets.flatten())
         glBufferSubData(GL_ARRAY_BUFFER, 4*(self.vertices.size+self.offsets.size), 4*self.activations.size, self.activations)
 
@@ -69,6 +70,11 @@ class Mesh:
         #
         # self.model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[0]))
 
+    def world_pos_coord(self):
+        model = np.asarray(self.current_model)
+        world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
+        return world_pos[:3]/world_pos[3]
+
     def world_pos_velocity(self):
         # model = np.asarray(self.current_model)[:3, :3]
         # pos = self.vertices + self.offsets
@@ -81,7 +87,7 @@ class Mesh:
         world_velocity = model @ np.array([self.velocity[0], self.velocity[1], self.velocity[2], 1])
         return world_pos[:3]/world_pos[3], world_velocity[:3]/world_velocity[3]
 
-    def draw(self, shader_program, t):
+    def draw(self, shader_program, view, projection, t):
         self.update_buffer_offsets()
 
         shader_program.use()
@@ -95,21 +101,20 @@ class Mesh:
             rotation = self.rotation_angle
             rotation *= max(0, 1 / (1 + math.exp(-2 * (dt_total - 1.5))) - .05)
             self.last_rotation_time = t
-            model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[0]))
+            model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[2]))
             self.current_model = model
         else:
             model = self.model
 
-        camera_pos = glm.vec3(0.0, 3.0, 10.0)
+        # camera_pos = glm.vec3(0.0, 3.0, 10.0)
 
-        view = glm.lookAt(camera_pos, glm.vec3(0.0, 0.0, 0.0), self.up)
-        shader_program.set_matrix("view", view)
+        # view = glm.lookAt(camera_pos, glm.vec3(0.0, 0.0, 0.0), self.up)
+        # shader_program.set_matrix("view", view)
 
-        projection = glm.mat4(glm.perspective(glm.radians(45.0), 1600 / 1600, 0.1, 100.0))
+        # projection = glm.mat4(glm.perspective(glm.radians(45.0), 1600 / 1600, 0.1, 100.0))
 
         shader_program.set_matrix("model", model)
         shader_program.set_matrix("view", view)
         shader_program.set_matrix("projection", projection)
-
         glBindVertexArray(self.vao)
-        glDrawElements(GL_TRIANGLES, len(self.triangles)*12, GL_UNSIGNED_INT, None)
+        glDrawElements(GL_TRIANGLES, len(self.triangles)*3, GL_UNSIGNED_INT, None)
