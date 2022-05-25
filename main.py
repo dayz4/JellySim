@@ -90,15 +90,15 @@ def main():
     mode = 'train'
     actor_model = ''
     critic_model = ''
-    # actor_model = 'ppo_actor_2.pth'
-    # critic_model = 'ppo_critic_2.pth'
+    actor_model = 'ppo_actor.pth'
+    critic_model = 'ppo_critic.pth'
 
     hyperparameters = {
-        'timesteps_per_batch': 2400,
+        'timesteps_per_batch': 2048,
         'max_timesteps_per_episode': 500,
-        'gamma': 0.99,
+        'gamma': 0.9,
         'n_updates_per_iteration': 10,
-        'lr': 3e-2,
+        'lr': 3e-4,
         'clip': 0.2,
         'render': True,
         'render_every_i': 10

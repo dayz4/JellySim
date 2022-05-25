@@ -13,7 +13,7 @@ class Predator:
         self.vao = glGenVertexArrays(1)
         self.vbo = glGenBuffers(1)
         self.model = self.set_model_matrix()
-        self.velocity_magnitude = .1
+        self.velocity_magnitude = .12
         self.setup_buffers()
 
     def draw(self, shader_program, view, projection):

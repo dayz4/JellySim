@@ -39,7 +39,7 @@ class OceanEnv(gym.Env):
         self.dist_from_predator = self.calc_dist_from_predator()
 
     def reset(self):
-        self.init_models()
+        self.jellyfish, self.env_mesh = self.init_models()
         self.total_dist_from_food, self.dist_from_closest_food, self.closest_food_idx = self.calc_dist_from_food()
         self.dist_from_predator = self.calc_dist_from_predator()
         self.reward = 0
@@ -47,6 +47,7 @@ class OceanEnv(gym.Env):
 
     def step(self, action):
         # print("action", action)
+        action = np.clip(action, self.action_space.low, self.action_space.high)
         current_frame = glfw.get_time() / 3.0
         dt = current_frame - self.last_frame
         # print(dt)
@@ -63,21 +64,21 @@ class OceanEnv(gym.Env):
 
         total_dist_from_food, dist_from_closest_food, closest_food_idx = self.calc_dist_from_food()
 
-        if total_dist_from_food-.01 > self.total_dist_from_food:
-            # print("A")
-            self.reward -= 5 * abs(self.total_dist_from_food - total_dist_from_food)
-        elif total_dist_from_food+.01 < self.total_dist_from_food:
+        # if total_dist_from_food-.01 > self.total_dist_from_food:
+        #     # print("A")
+        #     self.reward -= 5 * abs(self.total_dist_from_food - total_dist_from_food)
+        if total_dist_from_food+.01 < self.total_dist_from_food:
             # print("B")
             self.reward += 5 * abs(self.total_dist_from_food - total_dist_from_food)
 
-        if dist_from_closest_food-.01 > self.dist_from_closest_food:
-            # print("C")
-            self.reward -= 2.5 * abs(self.dist_from_closest_food - dist_from_closest_food)
-        elif dist_from_closest_food+.01 < self.dist_from_closest_food:
+        # if dist_from_closest_food-.01 > self.dist_from_closest_food:
+        #     # print("C")
+        #     self.reward -= 2.5 * abs(self.dist_from_closest_food - dist_from_closest_food)
+        if dist_from_closest_food+.01 < self.dist_from_closest_food:
             # print("D")
-            self.reward += 2.5 * abs(self.dist_from_closest_food - dist_from_closest_food)
-
-        if dist_from_closest_food < .8:
+            self.reward += 3 * abs(self.dist_from_closest_food - dist_from_closest_food)
+        # print(dist_from_closest_food)
+        if dist_from_closest_food < 1:
             print("Got food!")
             self.reward += 10
             self.env_mesh.respawn_food(closest_food_idx)
@@ -87,10 +88,10 @@ class OceanEnv(gym.Env):
 
         if dist_from_predator+.05 < self.dist_from_predator:
             # print("E")
-            self.reward -= 3 * abs(self.dist_from_predator - dist_from_predator)
-        elif dist_from_predator-.05 > self.dist_from_predator:
-            # print("F")
-            self.reward += 3 * abs(self.dist_from_predator - dist_from_predator)
+            self.reward -= 2 * abs(self.dist_from_predator - dist_from_predator)
+        # elif dist_from_predator-.05 > self.dist_from_predator:
+        #     # print("F")
+        #     self.reward += 2 * abs(self.dist_from_predator - dist_from_predator)
 
         if dist_from_predator < .2:
             print("Eaten by predator :(")

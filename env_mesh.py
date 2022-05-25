@@ -45,16 +45,16 @@ class EnvMesh:
 
     def generate_random_pos(self):
         return [
-            random.random() * 10 - 5,
+            random.choice([random.random() * 3 - 6, random.random() * 3 + 3]),
             random.random() * 3 + 2,
-            random.random() * 10 - 5
+            random.random() * 4 - 2
         ]
 
     def generate_predator_pos(self):
         return [
-            random.random() * 2 - 5,
+            random.random() * 8 - 4,
             random.random() * 3 - 5,
-            random.random() * 10 - 5
+            random.random() * 6 - 3
         ]
 
     def world_pos(self):
