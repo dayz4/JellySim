@@ -16,7 +16,7 @@ class Mesh:
         self.triangles = triangles
         self.vao = glGenVertexArrays(1)
         self.vbo = glGenBuffers(1)
-        self.pos = np.mean(self.vertices, axis=0)
+        self.pos = np.zeros(3)
         self.velocity = glm.vec3(0.0, 0.0, 0.0)
         self.up = glm.vec3(0.0, 1.0, 0.0)
         self.rotation_axis = np.array([0.0, 1.0, 0.0])
@@ -79,6 +79,22 @@ class Mesh:
         world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
         return world_pos[:3]/world_pos[3]
 
+    def world_vel(self):
+        model = np.asarray(self.current_model)
+        world_vel = model @ np.array([self.velocity[0], self.velocity[1], self.velocity[2], 1])
+        return world_vel[:3]/world_vel[3]
+
+    def screen_pos(self):
+        model = np.asarray(self.current_model)
+        view = np.asarray(self.view)
+        projection = np.asarray(self.projection)
+        screen_pos = projection @ view @ model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
+        return screen_pos[:3] / screen_pos[3]
+
+    def add_translation(self, dq):
+        self.model = glm.translate(self.model, glm.vec3(dq[0], dq[1], dq[2]))
+        # self.current_model = self.model
+
     # def world_pos_velocity(self):
     #     # model = np.asarray(self.current_model)[:3, :3]
     #     # pos = self.vertices + self.offsets
@@ -92,17 +108,19 @@ class Mesh:
     #     return world_pos[:3]/world_pos[3], world_velocity[:3]/world_velocity[3]
 
     def update(self, t):
-        dt_total = t - self.rotation_start_time
-        if self.rotating and dt_total > 4:
-            self.end_rotation(t)
-        elif self.rotating:
+        if self.rotating:
+            dt_total = t - self.rotation_start_time
             rotation = self.rotation_angle
-            rotation *= max(0, 1 / (1 + math.exp(-2 * (dt_total - 1.5))) - .05)
-            self.last_rotation_time = t
+            rotation *= max(0.0, 1 / (1 + math.exp(-2 * (dt_total - 1.5))) - .05)
+            # self.last_rotation_time = t
             model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[2]))
             self.current_model = model
+            if dt_total > 4:
+                self.end_rotation(t)
+        else:
+            self.current_model = self.model
 
-    def draw(self, t):
+    def draw(self):
         self.update_buffer_offsets()
 
         self.shader_program.use()

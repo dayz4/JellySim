@@ -84,7 +84,7 @@ def main():
 
     # env = OceanEnv()
     # while True:
-    #     env.step([0, 0, 0, 0, 0, 0, 0, .1])
+    #     env.step([0, 0, 0, 1.8, 0, 0, 0, 0])
     #     env.render()
 
     mode = 'train'
@@ -94,14 +94,14 @@ def main():
     critic_model = 'ppo_critic.pth'
 
     hyperparameters = {
-        'timesteps_per_batch': 2048,
+        'timesteps_per_batch': 5000,
         'max_timesteps_per_episode': 500,
         'gamma': 0.9,
         'n_updates_per_iteration': 10,
         'lr': 3e-4,
         'clip': 0.2,
         'render': True,
-        'render_every_i': 10
+        'render_every_i': 5
     }
 
     env = OceanEnv()

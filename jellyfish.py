@@ -5,6 +5,9 @@ import os
 import math
 import random
 
+import scipy
+from scipy import spatial
+
 
 class Jellyfish:
     def __init__(self, mesh, muscles, radial_muscles, fem_elements, rhopalia):
@@ -15,8 +18,8 @@ class Jellyfish:
         self.activations, self.innervations = self.load_muscle_activations()
         self.dnn_activations, self.dnn_innervations = self.load_dnn_activations()
         self.internal_forces = np.zeros((len(self.mesh.vertices), 3))
-        self.positions = self.mesh.vertices
-        self.velocities = np.zeros(self.positions.shape)
+        self.position = np.zeros(3)
+        self.velocity = np.zeros(3)
         self.nerve_net = self.load_nerve_net()
         self.dnn = self.load_nerve_net()
         self.last_mnn_conduction_time = 0
@@ -33,8 +36,8 @@ class Jellyfish:
         # self.new_dnn_activations = [194]
         self.last_activate_time = -7
         self.internal_positions = self.mesh.vertices
-        self.internal_velocities = np.zeros(self.positions.shape)
-        self.forces = np.zeros(self.positions.shape)
+        self.internal_velocities = np.zeros(self.internal_positions.shape)
+        self.forces = np.zeros(self.internal_positions.shape)
         # self.mnn_delay = 1.4
         self.mnn_delay = 0
         # self.dnn_activate_time = 0
@@ -42,10 +45,14 @@ class Jellyfish:
         self.mnn_dnn_angle = None
         self.rhopalia = self.load_rhopalia(rhopalia)
         self.at_rest = True
+        self.rotation_start_time = 0
+        self.rotation_angle = 0
+        self.rotation_axis = None
+        self.rotating = False
 
-    def draw(self, t):
+    def draw(self):
         # self.update(t, dt, 2, 1.4)
-        self.mesh.draw(t)
+        self.mesh.draw()
 
     def update(self, t, dt, rhop_idx, mnn_delay):
         if t - self.last_activate_time > 7:
@@ -73,7 +80,7 @@ class Jellyfish:
 
         for fem_element in self.fem_elements:
             fem_element.update(t, dt)
-        self.apply_forces(dt)
+        self.apply_forces(t, dt)
 
         for i, muscle in enumerate(self.radial_muscles):
             muscle.update(t)
@@ -180,30 +187,36 @@ class Jellyfish:
         mass = .005
         v_next = vt + h * (fint + fext) / mass
         q_next = qt + h * v_next
-
         # v_next = (mass * vt + h * (fint + fext)) / (mass - h**2 * dfdt)
 
         return q_next, v_next
 
-    def apply_forces(self, dt):
+    def apply_forces(self, t, dt):
         normals = self.calc_normals()
         vs = np.zeros((len(self.fem_elements), 3))
         for i, fem_element in enumerate(self.fem_elements):
             v0, v1, v2, v3 = fem_element.vertex_ids
-            v = (self.velocities[v0] + self.velocities[v1] + self.velocities[v2] + self.velocities[v3]) / 4.0
+            v = (self.internal_velocities[v0] + self.internal_velocities[v1] + self.internal_velocities[v2] + self.internal_velocities[v3]) / 4.0
             vs[i] = v
         vnorms = np.linalg.norm(vs, axis=1)
 
         thrust = self.compute_thrust(normals, vnorms, vs) / 10.0
-        # drag = -self.compute_drag(normals, vnorms, vs) / 10000.0
+
+        vs = np.zeros((len(self.fem_elements), 3))
+        for i, fem_element in enumerate(self.fem_elements):
+            v = self.velocity
+            vs[i] = v
+        vnorms = np.linalg.norm(vs, axis=1)
+
+        drag = -self.compute_drag(normals, vnorms, vs) / 50000.0
         # thrust = 0
-        drag = 0
-        qt = self.positions
-        vt = self.velocities
+        # drag = 0
+        qt = self.position
+        vt = self.velocity
         fint = self.aggregate_internal_forces()
         fext = thrust + drag
 
-        self.apply_internal_forces(fint, dt)
+        self.apply_internal_forces(fint, dt, t)
 
         # fint = np.zeros(fint.shape)
         # _, v_next = self.euler(qt, vt, np.zeros(3), fext, dt)
@@ -216,17 +229,31 @@ class Jellyfish:
         #     # self.mesh.up = self.mesh.up * .5 + dir * .5
         #     self.mesh.up = dir
 
-        q_next, v_next = self.euler(qt, vt, fint, fext, dt)
-        self.mesh.offsets += q_next - qt
-        self.positions = q_next
+        dq, v_next = self.euler(np.zeros(3), vt, 0, fext, dt)
+        # print("dq", np.linalg.norm(dq))
+        # print(dt)
+        if self.rotating:
+            dt_total = t - self.rotation_start_time
+            rotation = self.rotation_angle
+            rotation *= max(0.0, 1 / (1 + math.exp(-2 * (dt_total - 1.5))) - .05)
+            rot_vec = self.rotation_axis * rotation
+            rotation_matrix = scipy.spatial.transform.Rotation.from_rotvec(rot_vec)
+            dq = rotation_matrix.apply(dq)
+            if dt > 4:
+                self.rotating = False
+
+        self.position += dq
+        self.mesh.add_translation(dq)
+        # self.mesh.offsets += dq
         # for i, v in enumerate(v_next):
         #     if sum(v) < .0001:
         #         v_next[i] = 0
-        self.velocities = v_next
+        self.velocity = v_next
 
-        q_next, v_next = self.euler(qt, vt, 0, fext, dt)
-        self.mesh.pos = np.mean(q_next, axis=0)
-        self.mesh.velocity = np.mean(v_next, axis=0)
+        # fext = thrust + drag
+        # q_next, v_next = self.euler(qt, vt, 0, fext, dt)
+        self.mesh.pos = self.position
+        self.mesh.velocity = self.velocity
 
         # self.mesh.get_rotation(angle, axis)
 
@@ -238,10 +265,10 @@ class Jellyfish:
         #     if np.linalg.norm(v) < .1:
         # self.smooth_velocities()
 
-    def apply_internal_forces(self, fint, dt):
+    def apply_internal_forces(self, fint, dt, t):
         qt = self.internal_positions
         vt = self.internal_velocities
-        q_next, v_next = self.euler(qt, vt, fint, np.zeros(3), dt)
+        q_next, v_next = self.euler(qt, vt, fint, 0, dt)
 
         for fem_element in self.fem_elements:
             v1, v2, v3, v4 = fem_element.vertex_ids
@@ -272,6 +299,7 @@ class Jellyfish:
             fem_element.velocities =\
                 np.array([v_next[v1], v_next[v2], v_next[v3], v_next[v4]])
 
+        self.mesh.offsets += q_next - qt
         self.internal_velocities = v_next
         self.internal_positions = q_next
 
@@ -316,7 +344,10 @@ class Jellyfish:
         ba = np.zeros((len(self.fem_elements), 3))
         ca = np.zeros((len(self.fem_elements), 3))
         for i, fem_element in enumerate(self.fem_elements):
-            a, b, c = fem_element.surface_triangle
+            v1, v2, v3 = fem_element.surface_triangle
+            a = self.mesh.vertices[v1] + self.mesh.offsets[v1]
+            b = self.mesh.vertices[v2] + self.mesh.offsets[v2]
+            c = self.mesh.vertices[v3] + self.mesh.offsets[v3]
             ba[i] = b - a
             ca[i] = c - a
         normals = np.cross(ba, ca)
@@ -357,6 +388,10 @@ class Jellyfish:
         self.mesh.rotation_axis = np.cross(start_dir, np.array([0.0, 1.0, 0.0]))
         self.mesh.rotation_start_time = t
         self.mesh.rotating = True
+        self.rotation_start_time = t
+        self.rotation_axis = np.cross(start_dir, np.array([0.0, 1.0, 0.0]))
+        self.rotating = True
+        self.rotation_angle = -math.cos(mnn_dnn_angle) * .5
         # self.mesh.up = self.mesh.up * .5 + dir * .5
         # self.mesh.up = dir
         # self.mesh.rotation_angle

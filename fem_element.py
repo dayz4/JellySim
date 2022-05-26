@@ -46,13 +46,15 @@ class FEMElement:
     #     return max_area, max_triangle
 
     def find_surface_triangle(self):
-        v0, v1, v2, v3 = self.reference_vertices
+        r0, r1, r2, r3 = self.reference_vertices
+        v0, v1, v2, v3 = self.vertex_ids
         # return [v0, v1, v2], 0
-        triangles = [[v0, v1, v2], [v0, v1, v3], [v0, v2, v3], [v1, v2, v3]]
+        triangles = [[r0, r1, r2], [r0, r1, r3], [r0, r2, r3], [r1, r2, r3]]
+        idxs = [[v0, v1, v2], [v0, v1, v3], [v0, v2, v3], [v1, v2, v3]]
         min_theta = math.pi
         surface_triangle = None
         surface_area = 0
-        for a, b, c in triangles:
+        for i, (a, b, c) in enumerate(triangles):
             ab = b - a
             ac = c - a
             normal = np.cross(ab, ac)
@@ -60,7 +62,7 @@ class FEMElement:
             theta = min(theta, math.pi - theta)
             if theta < min_theta:
                 min_theta = theta
-                surface_triangle = [a, b, c]
+                surface_triangle = idxs[i]
                 surface_area = np.linalg.norm(ab) * np.linalg.norm(ac) * math.cos(theta) / 2.0
         return surface_triangle, surface_area
 

@@ -4,7 +4,7 @@ from OpenGL.GLUT import *
 import glm
 
 
-class Food:
+class Wall:
     def __init__(self, pos, view, projection):
         self.pos = np.array(pos)
         self.vertices = self.get_vertex_positions()
