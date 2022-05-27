@@ -35,24 +35,25 @@ class OceanEnv(gym.Env):
         )
 
         self.reward = 0
-        self.total_dist_from_food, self.dist_from_closest_food, self.closest_food_idx = self.calc_dist_from_food()
+        food_dists = np.linalg.norm(self.get_food_dirs(), axis=1)
+        self.total_dist_from_food, self.dist_from_closest_food, _ = self.calc_dist_from_food(food_dists)
         # self.view = self.get_view_matrix()
         # self.dist_from_predator = self.calc_dist_from_predator()
 
     def reset(self):
         self.jellyfish, self.env_mesh = self.init_models()
-        self.total_dist_from_food, self.dist_from_closest_food, self.closest_food_idx = self.calc_dist_from_food()
+        food_dists = np.linalg.norm(self.get_food_dirs(), axis=1)
+        self.total_dist_from_food, self.dist_from_closest_food, _ = self.calc_dist_from_food(food_dists)
         # self.dist_from_predator = self.calc_dist_from_predator()
         self.reward = 0
         return self.get_state()
 
     def step(self, action):
         # print("action", action)
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        # action = np.clip(action, self.action_space.low, self.action_space.high)
         # print(action)
         current_frame = glfw.get_time() / 3.0
         dt = current_frame - self.last_frame
-        # print(dt)
 
         # rhop_idx = action[0]
         # mnn_delay = action[1][rhop_idx]
@@ -63,35 +64,44 @@ class OceanEnv(gym.Env):
         # self.env_mesh.predator.update(self.jellyfish.mesh.world_pos(), dt)
         self.last_frame = current_frame
 
-        total_dist_from_food, dist_from_closest_food, closest_food_idx = self.calc_dist_from_food()
+        jelly_vel = self.jellyfish.mesh.velocity
+        jelly_norm = np.linalg.norm(jelly_vel)
+        to_foods = self.get_food_dirs()
+        food_norms = np.linalg.norm(to_foods, axis=1)
+        if jelly_norm > .01:
+            food_dirs = np.zeros(to_foods.shape)
+            for i, to_food in enumerate(to_foods):
+                food_dirs[i] = to_food / food_norms[i]
+            # food_dirs = (to_foods.T / food_norms).T
+            food_angles = abs(np.arccos(np.dot(food_dirs, (jelly_vel / jelly_norm))))
+            angle_to_food = np.min(food_angles)
+            # for to_food in to_foods:
+            #     angle_to_food = min(angle_to_food,
+            #                         abs(np.arccos(np.dot(jelly_vel, to_food) / (jelly_norm * np.linalg.norm(to_food)))))
+            # print(food_angles)
+            self.reward += .2 * (1 - abs(angle_to_food))
+
+        total_dist_from_food, dist_from_closest_food, closest_food_idx = self.calc_dist_from_food(food_norms)
 
         # if total_dist_from_food-.01 > self.total_dist_from_food:
         #     # print("A")
         #     self.reward -= 5 * abs(self.total_dist_from_food - total_dist_from_food)
         # if total_dist_from_food+.01 < self.total_dist_from_food:
             # print("B")
-        # self.reward += 1 * (self.total_dist_from_food - total_dist_from_food)
+        self.reward += .05 * (self.total_dist_from_food - total_dist_from_food)
 
         # if dist_from_closest_food-.01 > self.dist_from_closest_food:
         #     # print("C")
         #     self.reward -= 2.5 * abs(self.dist_from_closest_food - dist_from_closest_food)
         # if dist_from_closest_food+.01 < self.dist_from_closest_food:
             # print("D")
-        self.reward += 1.5 * (self.dist_from_closest_food - dist_from_closest_food)
+        self.reward += .1 * (self.dist_from_closest_food - dist_from_closest_food)
         # print(dist_from_closest_food)
         if dist_from_closest_food < 1:
             print("Got food!")
             self.reward += 50
             self.env_mesh.respawn_food(closest_food_idx)
-            self.total_dist_from_food, self.dist_from_closest_food, self.closest_food_idx = self.calc_dist_from_food()
-
-        angle_to_food = float('inf')
-        jelly_vel = self.jellyfish.mesh.world_vel()
-        to_foods = self.get_food_dirs()
-        if sum(jelly_vel) > 0:
-            for to_food in to_foods:
-                angle_to_food = min(angle_to_food, np.dot(jelly_vel, to_food) / (np.linalg.norm(jelly_vel) * np.linalg.norm(to_food)))
-            self.reward += .5 * (1 - abs(angle_to_food))
+            self.total_dist_from_food, self.dist_from_closest_food, _ = self.calc_dist_from_food(food_norms)
 
         # if dist_from_closest_food-.1 > self.dist_from_closest_food and total_dist_from_food-.1 > self.total_dist_from_food:
         #     self.reward -= .5
@@ -129,21 +139,18 @@ class OceanEnv(gym.Env):
 
         self.total_dist_from_food = total_dist_from_food
         self.dist_from_closest_food = dist_from_closest_food
-        self.closest_food_idx = closest_food_idx
         # self.dist_from_predator = dist_from_predator
 
-        state = self.get_state()
-        done = self.reward < -5
+        state = to_foods.flatten()
+        done = self.reward < -3
         info = []
 
         return state, self.reward, done, info
 
-    def calc_dist_from_food(self):
-        food_positions = self.env_mesh.food.pos
-        dists = np.linalg.norm(food_positions - self.jellyfish.mesh.world_pos(), axis=1)
-        total_dist = np.sum(dists)
-        min_dist = np.min(dists)
-        closest_food_idx = np.argmin(dists)
+    def calc_dist_from_food(self, food_dists):
+        total_dist = np.sum(food_dists)
+        min_dist = np.min(food_dists)
+        closest_food_idx = np.argmin(food_dists)
         return total_dist, min_dist, closest_food_idx
 
     def calc_dist_from_predator(self):
@@ -212,12 +219,14 @@ class OceanEnv(gym.Env):
     #     return np.concatenate(([jelly_typestate], food_typestate, [predator_typestate]))
 
     def get_food_dirs(self):
-        to_foods = []
-        jelly_pos = self.jellyfish.mesh.world_pos()
-        for food_pos in self.env_mesh.food.world_pos():
-            to_food = food_pos - jelly_pos
-            to_foods.append(to_food)
-        return to_foods
+        return self.env_mesh.food.pos - self.jellyfish.mesh.world_pos()
+
+        # to_foods = []
+        # jelly_pos = self.jellyfish.mesh.world_pos()
+        # for food_pos in self.env_mesh.food.world_pos():
+        #     to_food = food_pos - jelly_pos
+        #     to_foods.append(to_food)
+        # return np.linalg.norm(to_foods)
 
     def get_state(self):
         to_foods = self.get_food_dirs()

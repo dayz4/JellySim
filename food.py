@@ -94,7 +94,7 @@ class Food:
         # # velocities = np.concatenate((self.velocities, np.ones(self.velocities.shape[0]).reshape(self.velocities.shape[0], 1)), axis=1)
         # world_velocities = self.velocities @ model
         # return world_pos.flatten(), world_velocities.flatten()
-        return self.pos.flatten()
+        return self.pos
 
     # def screen_pos(self):
     #     view = np.asarray(self.view)

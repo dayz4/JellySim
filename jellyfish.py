@@ -168,17 +168,17 @@ class Jellyfish:
 
     def aggregate_internal_forces(self):
         internal_forces = np.zeros((len(self.mesh.vertices), 3))
-        counts = np.zeros((len(self.mesh.vertices), 1))
+        # counts = np.zeros((len(self.mesh.vertices), 1))
         for fem_element in self.fem_elements:
             v1, v2, v3, v4 = fem_element.vertex_ids
             internal_forces[v1] += fem_element.forces[0]
             internal_forces[v2] += fem_element.forces[1]
             internal_forces[v3] += fem_element.forces[2]
             internal_forces[v4] += fem_element.forces[3]
-            counts[v1] += 1
-            counts[v2] += 1
-            counts[v3] += 1
-            counts[v4] += 1
+            # counts[v1] += 1
+            # counts[v2] += 1
+            # counts[v3] += 1
+            # counts[v4] += 1
         # internal_forces /= counts
         return internal_forces
 
@@ -202,16 +202,16 @@ class Jellyfish:
 
         thrust = self.compute_thrust(normals, vnorms, vs) / 10.0
 
-        vs = np.zeros((len(self.fem_elements), 3))
-        for i, fem_element in enumerate(self.fem_elements):
-            v = self.velocity
-            vs[i] = v
-        vnorms = np.linalg.norm(vs, axis=1)
-
-        drag = -self.compute_drag(normals, vnorms, vs) / 50000.0
+        # vs = np.zeros((len(self.fem_elements), 3))
+        # for i, fem_element in enumerate(self.fem_elements):
+        #     v = self.velocity
+        #     vs[i] = v
+        # vnorms = np.linalg.norm(vs, axis=1)
+        drag = -self.compute_drag(normals, self.velocity) / 60000.0
         # thrust = 0
         # drag = 0
-        qt = self.position
+        # qt = self.position
+
         vt = self.velocity
         fint = self.aggregate_internal_forces()
         fext = thrust + drag
@@ -232,6 +232,7 @@ class Jellyfish:
         dq, v_next = self.euler(np.zeros(3), vt, 0, fext, dt)
         # print("dq", np.linalg.norm(dq))
         # print(dt)
+        self.velocity = v_next
         if self.rotating:
             dt_total = t - self.rotation_start_time
             rotation = self.rotation_angle
@@ -239,6 +240,7 @@ class Jellyfish:
             rot_vec = self.rotation_axis * rotation
             rotation_matrix = scipy.spatial.transform.Rotation.from_rotvec(rot_vec)
             dq = rotation_matrix.apply(dq)
+            v_next = rotation_matrix.apply(dq)
             if dt > 4:
                 self.rotating = False
 
@@ -248,12 +250,11 @@ class Jellyfish:
         # for i, v in enumerate(v_next):
         #     if sum(v) < .0001:
         #         v_next[i] = 0
-        self.velocity = v_next
 
         # fext = thrust + drag
         # q_next, v_next = self.euler(qt, vt, 0, fext, dt)
         self.mesh.pos = self.position
-        self.mesh.velocity = self.velocity
+        self.mesh.velocity = v_next
 
         # self.mesh.get_rotation(angle, axis)
 
@@ -357,18 +358,17 @@ class Jellyfish:
     def C_thrust(phi):
         return 0.25 * (math.exp(0.8 * phi) - 1)
 
-    def compute_drag(self, normals, vnorms, vs):
+    def compute_drag(self, normals, v):
         total_drag = np.zeros(3)
         for i, fem_element in enumerate(self.fem_elements):
-            v = vs[i]
-            vnorm = vnorms[i]
+            vnorm = np.linalg.norm(v)
             if vnorm == 0:
                 continue
             A = fem_element.surface_area
             d = v / vnorm
             n = normals[i]
             p = 1000 # density
-            phi = math.pi / 2.0 - math.acos(np.dot(-n, v))
+            phi = math.pi / 2.0 - math.acos(np.dot(n, v))
             C = self.C_drag(phi)
             drag = p * A * C * vnorm**2 * d / 2.0
             total_drag += drag
@@ -383,15 +383,17 @@ class Jellyfish:
         start_dir = starting_pos / np.linalg.norm(starting_pos)
         mnn_dnn_angle = math.acos(np.dot(start_dir, fem_element.center / np.linalg.norm(fem_element.center)))
 
+        rotation_axis = np.cross(start_dir, np.array([0.0, 1.0, 0.0]))
+        rotation_angle = -math.cos(mnn_dnn_angle) * .5
         # self.mesh.rotation_angle = self.mesh.current_rotation + (math.cos(2 * mnn_dnn_angle)) / 2.0
-        self.mesh.rotation_angle = -math.cos(mnn_dnn_angle) * .5
-        self.mesh.rotation_axis = np.cross(start_dir, np.array([0.0, 1.0, 0.0]))
+        self.mesh.rotation_angle = rotation_angle
+        self.mesh.rotation_axis = rotation_axis
         self.mesh.rotation_start_time = t
         self.mesh.rotating = True
         self.rotation_start_time = t
-        self.rotation_axis = np.cross(start_dir, np.array([0.0, 1.0, 0.0]))
+        self.rotation_axis = rotation_axis
         self.rotating = True
-        self.rotation_angle = -math.cos(mnn_dnn_angle) * .5
+        self.rotation_angle = rotation_angle
         # self.mesh.up = self.mesh.up * .5 + dir * .5
         # self.mesh.up = dir
         # self.mesh.rotation_angle

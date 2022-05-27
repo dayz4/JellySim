@@ -75,13 +75,15 @@ class Mesh:
         # self.model = glm.rotate(self.model, rotation, glm.vec3(self.rotation_axis[0], self.rotation_axis[1], self.rotation_axis[0]))
 
     def world_pos(self):
-        model = np.asarray(self.current_model)
-        world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
-        return world_pos[:3]/world_pos[3]
+        model = np.asarray(self.current_model)[:3, :3]
+        # world_pos = model @ np.array([self.pos[0], self.pos[1], self.pos[2], 1])
+        world_pos = model @ self.pos
+        # return world_pos[:3]/world_pos[3]
+        return world_pos
 
     def world_vel(self):
         model = np.asarray(self.current_model)
-        world_vel = model @ np.array([self.velocity[0], self.velocity[1], self.velocity[2], 1])
+        world_vel = model @ np.array([self.velocity[0] - self.pos[0], self.velocity[1] - self.pos[1], self.velocity[2] - self.pos[2], 1])
         return world_vel[:3]/world_vel[3]
 
     def screen_pos(self):
