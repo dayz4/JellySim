@@ -6,7 +6,7 @@ UCLA MS Capstone project
 
 python main.py
 
-python main.py -- train to train RL model
+python main.py -- train (to train RL model)
 
 
 **To close:**
