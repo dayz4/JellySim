@@ -2,18 +2,18 @@
 UCLA MS Capstone project
 
 
-To run:
+**To run:**
 
 python main.py
 
 python main.py -- train to train RL model
 
 
-To close:
+**To close:**
 
 CTRL-C in command prompt
 
 
-Dependencies:
+**Dependencies:**
 
 pip install -r requirements.txt
