@@ -2,6 +2,7 @@ import glm
 from OpenGL.GL import *
 from RLppo.test_train import train, test
 import gym
+import sys
 
 import glfw
 from ocean_env import OceanEnv
@@ -106,8 +107,7 @@ def main():
 
     env = OceanEnv()
     # env = gym.make('MountainCarContinuous-v0')
-
-    if mode == 'test':
+    if len(sys.argv) > 1 and sys.argv[1] == '--train':
         train(env=env, hyperparameters=hyperparameters, actor_model=actor_model, critic_model=critic_model)
     else:
         test(env=env, actor_model=actor_model)
