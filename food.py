@@ -17,18 +17,14 @@ class Food:
         self.view = view
         self.projection = projection
         self.setup_buffers()
-        # print(self.vertices)
-        # print(self.triangles)
 
     def draw(self, shader_program):
         shader_program.use()
 
-        # model = glm.rotate(model, glm.radians(-40.0), glm.vec3(0.0, 1.0, 1.0))
         shader_program.set_matrix("model", self.model)
         shader_program.set_matrix("view", self.view)
         shader_program.set_matrix("projection", self.projection)
-        # print(self.vertices)
-        # print(self.triangles)
+
         glBindVertexArray(self.vao)
         glDrawElements(GL_TRIANGLES, len(self.triangles)*3, GL_UNSIGNED_INT, None)
 
@@ -86,32 +82,6 @@ class Food:
             v3 = 3 + i*4
             triangles.extend([[v0, v1, v2], [v0, v1, v3], [v0, v2, v3], [v1, v2, v3]])
         return np.array(triangles)
-
-    def world_pos(self):
-        # model = np.asarray(self.model)[:3, :3]
-        # # pos = np.concatenate((self.pos, np.ones(self.pos.shape[0]).reshape(self.pos.shape[0], 1)), axis=1)
-        # world_pos = self.pos @ model
-        # # velocities = np.concatenate((self.velocities, np.ones(self.velocities.shape[0]).reshape(self.velocities.shape[0], 1)), axis=1)
-        # world_velocities = self.velocities @ model
-        # return world_pos.flatten(), world_velocities.flatten()
-        return self.pos
-
-    # def screen_pos(self):
-    #     view = np.asarray(self.view)
-    #     # camera_pos = glm.vec3(0.0, 0.0, 10.0)
-    #     # view = glm.lookAt(camera_pos, glm.vec3(0.0, 0.0, 0.0), glm.vec3(0.0, 1.0, 0.0))
-    #     projection = np.asarray(self.projection)
-    #     screen_pos = np.zeros((self.pos.shape[0], 4))
-    #     # print(self.pos)
-    #     for i, pos in enumerate(self.pos):
-    #         # print("DFSD", projection @ view @ np.append(pos, [1]))
-    #         screen_pos[i] = projection @ view @ np.append(pos, [1])
-    #     # pos = np.hstack((self.pos, np.ones(len(self.pos)).reshape(len(self.pos), 1)))
-    #     # print(pos)
-    #     # print("DFS", (projection @ view @ pos.T).T)
-    #     # screen_pos = (projection @ view @ pos.T).T
-    #     # print(screen_pos)
-    #     return screen_pos[:, :3] / screen_pos[:, 3]
 
     def respawn(self, idx, pos):
         self.pos[idx] = pos

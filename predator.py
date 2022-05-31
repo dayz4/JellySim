@@ -59,7 +59,6 @@ class Predator:
 
     def set_model_matrix(self):
         model = glm.mat4(1.0)
-        # model = glm.rotate(model, glm.radians(-45.0), glm.vec3(1.0, 1.0, 0.0))
         return model
 
     def get_vertex_positions(self):
@@ -96,5 +95,3 @@ class Predator:
         ]
         return np.array(triangles)
 
-    def world_pos(self):
-        return self.pos
